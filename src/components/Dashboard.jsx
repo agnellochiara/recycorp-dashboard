@@ -211,7 +211,11 @@ export default function Dashboard() {
 
             {tab === 'overview' && (
               <Card exportBlock>
-                <CardHeader title="Ranking de sedes" subtitle={benchSubtitle(benchMetric)} />
+                <CardHeader
+                  title="Ranking de sedes"
+                  subtitle={benchSubtitle(benchMetric)}
+                  action={<Segmented value={benchMetric} onChange={setBenchMetric} options={BENCH_METRICS} className="no-export" />}
+                />
                 <div className="px-4 pb-4"><BenchmarkChart rows={siteRows} unit={unit} metric={benchMetric === 'rate' ? 'rate' : 'total'} /></div>
               </Card>
             )}
