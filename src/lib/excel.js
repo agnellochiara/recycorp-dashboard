@@ -3,9 +3,7 @@
 // para poder reutilizar `validateRows` sin importar si el archivo subido fue .csv o .xlsx.
 // La librería (pesada, ~0.5 MB) se carga de forma diferida: solo quien entra a Administración → Datos la baja.
 import { saveBlob } from './exporter.js';
-
-const stripAccents = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '');
-const normHeader = (h) => stripAccents(h).toLowerCase().trim().replace(/\s+/g, '_');
+import { normHeaderKey } from './csv.js';
 
 /** Lee un archivo .xlsx/.xls y devuelve filas como objetos {encabezado_normalizado: valor}. */
 export async function parseExcelFile(file) {
@@ -18,7 +16,7 @@ export async function parseExcelFile(file) {
   const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
   return json.map((row) => {
     const out = {};
-    for (const [k, v] of Object.entries(row)) out[normHeader(k)] = v;
+    for (const [k, v] of Object.entries(row)) out[normHeaderKey(k)] = v;
     return out;
   });
 }

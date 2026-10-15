@@ -3,6 +3,15 @@ import { MATERIALS, MEMO_MATERIALS, MEMO_IDS, TREATMENTS, MONTHS_LONG } from './
 
 const stripAccents = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '');
 const norm = (s) => stripAccents(s).toLowerCase().trim().replace(/\s+/g, ' ');
+/**
+ * Clave de columna a partir de un encabezado real (CSV o Excel): minúsculas, sin tildes, y CUALQUIER
+ * puntuación o espacio colapsado a "_" (no solo espacios) — así "Tipo de residuos" y "Peso (kg)", tal como
+ * los trae el Excel del extractor, se normalizan a "tipo_de_residuos" y "peso_kg" de forma predecible, en vez
+ * de dejar paréntesis u otra puntuación que nunca coincidiría con ningún alias.
+ */
+export function normHeaderKey(h) {
+  return stripAccents(h).toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+}
 // Quita sufijos legales habituales ("S.A.C.", "Sociedad Anónima Cerrada"…) para comparar solo el nombre comercial.
 const stripLegal = (s) => norm(s).replace(/\b(s\.?a\.?c\.?|s\.?a\.?a\.?|s\.?a\.?|e\.?i\.?r\.?l\.?|s\.?r\.?l\.?|sociedad anonima( cerrada| abierta)?)\b\.?/g, '').replace(/\s+/g, ' ').trim();
 
@@ -180,7 +189,7 @@ export function parseNumber(v) {
 }
 
 export function parseCsvText(text) {
-  const { data } = Papa.parse(text.trim(), { header: true, skipEmptyLines: true, transformHeader: (h) => norm(h).replace(/\s+/g, '_') });
+  const { data } = Papa.parse(text.trim(), { header: true, skipEmptyLines: true, transformHeader: normHeaderKey });
   return data;
 }
 
@@ -199,7 +208,7 @@ export function validateRows(rawRows, sites) {
     const line = i + 2; // +1 por el encabezado, +1 por índice 1-based
     const get = (...keys) => keys.map((k) => raw[k]).find((v) => v !== undefined && v !== '');
 
-    const tipoRaw = get('tipo_residuo', 'material', 'tipo');
+    const tipoRaw = get('tipo_residuo', 'material', 'tipo', 'tipo_de_residuos', 'tipo_de_residuo');
     const tipoNorm = norm(tipoRaw);
     if (TIPO_EXCLUDED.has(tipoNorm)) { excluded += 1; return; }
 
@@ -219,7 +228,7 @@ export function validateRows(rawRows, sites) {
     const override = TIPO_OVERRIDE[tipoNorm];
     const m = override ? override[0] : matchMaterial(tipoRaw);
     const t = override ? override[1] : matchTreatment(get('tratamiento', 'treatment', 'destino'));
-    const kg = parseNumber(get('kg', 'peso', 'cantidad'));
+    const kg = parseNumber(get('kg', 'peso', 'cantidad', 'peso_kg'));
 
     const issues = [];
     if (!p) issues.push(`periodo inválido: "${get('periodo', 'period') ?? get('mes', 'month') ?? ''}"`);
@@ -227,7 +236,7 @@ export function validateRows(rawRows, sites) {
     if (!m) issues.push(`tipo de residuo desconocido: "${tipoRaw ?? ''}"`);
     if (!t) issues.push(`tratamiento desconocido: "${get('tratamiento', 'treatment', 'destino') ?? ''}"`);
     if (m && t && MEMO_IDS.has(m) && t !== 'disposicion') issues.push('la madera no valorizable solo admite el tratamiento "Relleno sanitario / seguridad"');
-    if (!Number.isFinite(kg) || kg < 0) issues.push(`cantidad inválida: "${get('kg', 'peso', 'cantidad') ?? ''}"`);
+    if (!Number.isFinite(kg) || kg < 0) issues.push(`cantidad inválida: "${get('kg', 'peso', 'cantidad', 'peso_kg') ?? ''}"`);
     if (issues.length) errors.push({ line, message: issues.join('; ') });
     else rows.push({ p, s, m, t, kg });
   });
