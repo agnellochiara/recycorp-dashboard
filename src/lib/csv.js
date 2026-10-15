@@ -97,8 +97,42 @@ export function matchCompanyName(v, companies) {
 
 const sepNorm = (s) => norm(s).replace(/[·|/]/g, '-').replace(/\s*-\s*/g, ' - ');
 
+// Palabras que suelen faltar o sobrar al escribir una sede a mano ("AQP", "Av") sin que eso deba impedir el
+// match: no cuentan para ver si el valor subido queda "cubierto" por el nombre guardado.
+const SITE_STOPWORDS = new Set(['aqp', 'av', 'avenida']);
+const wordTokens = (s) => stripAccents(String(s ?? '')).toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+
+/**
+ * Qué tan bien `valueRaw` identifica a la sede `candidateRaw`: combina similitud de caracteres (para typos o
+ * tildes) con cobertura de palabras (para cuando falta "AQP", "Av" u otro relleno en medio del nombre, algo
+ * que la similitud de caracteres sola penaliza demasiado por estar en medio del texto y no al final).
+ */
+function siteScore(valueRaw, candidateRaw) {
+  const a = norm(valueRaw); const b = norm(candidateRaw);
+  let score = similarity(a, b);
+  if (b.includes(a) || a.includes(b)) score = Math.max(score, 0.85);
+  const at = wordTokens(valueRaw).filter((w) => !SITE_STOPWORDS.has(w));
+  if (at.length) {
+    const bt = new Set(wordTokens(candidateRaw));
+    const coverage = at.filter((w) => bt.has(w)).length / at.length;
+    if (coverage === 1) score = Math.max(score, 0.95);
+    else if (coverage >= 0.66) score = Math.max(score, 0.8);
+  }
+  return score;
+}
+
+function bestSite(valueRaw, pool, threshold) {
+  if (!valueRaw || !pool.length) return undefined;
+  let best = null; let bestScore = 0;
+  for (const s of pool) {
+    const sc = siteScore(valueRaw, s.name);
+    if (sc > bestScore) { bestScore = sc; best = s; }
+  }
+  return bestScore >= threshold ? best.id : undefined;
+}
+
 /** Identificador de sede (id, nombre completo, o "Marca · Local") → id de sede, con tolerancia a variantes. */
-function matchSite(v, sites) {
+function matchSite(v, sites, companyHint) {
   if (!v) return undefined;
   const n = norm(v);
   let hit = sites.find((s) => norm(s.id) === n || norm(s.name) === n);
@@ -106,26 +140,16 @@ function matchSite(v, sites) {
   const nSep = sepNorm(v);
   hit = sites.find((s) => sepNorm(s.name) === nSep);
   if (hit) return hit.id;
-  const best = fuzzyBest(n, sites.map((s) => ({ key: s.id, norm: norm(s.name) })), 0.8);
-  return best?.key;
+  const pool = companyHint ? sites.filter((s) => s.company === companyHint) : sites;
+  return bestSite(v, pool.length ? pool : sites, 0.78);
 }
 
 /** Variante de `matchSite` para archivos con "cliente" (marca) y "sede" (local) en columnas separadas. */
 function matchSiteFromParts(cliente, sede, sites, companyHint) {
   if (!cliente && !sede) return undefined;
   for (const combo of [cliente && sede ? `${cliente} · ${sede}` : null, sede, cliente].filter(Boolean)) {
-    const hit = matchSite(combo, sites);
+    const hit = matchSite(combo, sites, companyHint);
     if (hit) return hit;
-  }
-  // Último intento: el nombre de sede solo, comparado contra la parte derecha de "Marca · Local" (y si se
-  // reconoció una empresa, acotado a sus propias sedes, para no confundir locales con el mismo nombre genérico
-  // ("Principal", "Yanahuara"…) entre empresas distintas).
-  if (sede) {
-    const pool = companyHint ? sites.filter((s) => s.company === companyHint) : sites;
-    const n = norm(sede);
-    const candidates = pool.map((s) => { const parts = s.name.split('·'); return { key: s.id, norm: norm((parts[parts.length - 1] || s.name).trim()) }; });
-    const best = fuzzyBest(n, candidates, 0.82);
-    if (best) return best.key;
   }
   return undefined;
 }
@@ -219,10 +243,20 @@ export function validateRows(rawRows, sites) {
     const sedeRaw = get('sede');
     const empresaRaw = get('empresa', 'company');
     const companyHint = empresaRaw ? matchCompanyName(empresaRaw, companies) : null;
-    let s = localRaw ? matchSite(localRaw, sites) : undefined;
+    let s = localRaw ? matchSite(localRaw, sites, companyHint) : undefined;
     if (!s && clienteRaw && sedeRaw) s = matchSiteFromParts(clienteRaw, sedeRaw, sites, companyHint);
-    if (!s && sedeRaw && !clienteRaw) s = matchSite(sedeRaw, sites);
-    if (!s && clienteRaw && !sedeRaw) s = matchSite(clienteRaw, sites);
+    if (!s && sedeRaw && !clienteRaw) s = matchSite(sedeRaw, sites, companyHint);
+    if (!s && clienteRaw && !sedeRaw) s = matchSite(clienteRaw, sites, companyHint);
+    // Si hubo pista de empresa pero no se encontró nada dentro de sus propias sedes (p. ej. porque la "empresa"
+    // del archivo en realidad no coincide con ninguna, o el match quedó demasiado acotado), se reintenta sin
+    // acotar en vez de dar error por una pista que puede no ser fiable.
+    if (!s && companyHint) {
+      s = (localRaw && matchSite(localRaw, sites))
+        || (clienteRaw && sedeRaw && matchSiteFromParts(clienteRaw, sedeRaw, sites))
+        || (sedeRaw && !clienteRaw && matchSite(sedeRaw, sites))
+        || (clienteRaw && !sedeRaw && matchSite(clienteRaw, sites))
+        || undefined;
+    }
     const siteDisplay = localRaw || (clienteRaw && sedeRaw ? `${clienteRaw} · ${sedeRaw}` : null) || sedeRaw || clienteRaw || '';
 
     const override = TIPO_OVERRIDE[tipoNorm];
