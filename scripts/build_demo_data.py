@@ -34,14 +34,15 @@ MAPPING = {
     # Criterio del cliente: los "generales valorizables" se suman a los residuos generales.
     'Residuos Generales Valorizables': ('no_aprovechables', 'disposicion'),
     'Residuos Generales':              ('no_aprovechables', 'disposicion'),
-    # Criterio del cliente: la madera valorizable se excluye para no duplicar el cálculo.
-    'Madera Valorizables':             None,
+    # Madera valorizable: es un reciclable más (como el cartón o el metal), suma a los totales y a la
+    # valorización. No confundir con la madera NO valorizable (más abajo), que es memo.
+    'Madera Valorizables':             ('madera_v', 'reciclaje'),
     # Madera NO valorizable: ya forma parte de los residuos generales. Se guarda como dato de
     # referencia ("memo": material madera_nv) para saber qué fracción de los generales representa,
     # pero la app NO la suma a los totales.
     'Madera NO Valorizables':          ('madera_nv', 'disposicion'),
 }
-EXCLUDED_TYPES = ['Madera Valorizables']
+EXCLUDED_TYPES = []  # ningún tipo se excluye por completo (la madera valorizable dejó de excluirse: ver MAPPING)
 
 # SUPUESTO: giro de cada cliente, inferido del nombre comercial (editable en "Sedes y empresas").
 FORMATS = {

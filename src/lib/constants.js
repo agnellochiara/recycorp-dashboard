@@ -16,6 +16,7 @@ export const MATERIALS = [
   { id: 'papel', label: 'Papel', category: 'aprovechables', color: '#e6c84a' },
   { id: 'plastico_duro', label: 'Plástico duro', category: 'aprovechables', color: '#2a5fa8' },
   { id: 'mixto', label: 'Reciclaje mixto', category: 'aprovechables', color: '#b0a08a' },
+  { id: 'madera_v', label: 'Madera valorizable', category: 'aprovechables', color: '#c9a06b' },
   { id: 'no_aprovechables', label: 'No aprovechables', category: 'no_aprovechables', color: '#7b6fae' },
   { id: 'raee', label: 'RAEE', category: 'peligrosos', color: '#d6567f' },
   { id: 'peligrosos', label: 'Peligrosos', category: 'peligrosos', color: '#c23a3a' },
@@ -24,7 +25,9 @@ export const MATERIALS = [
 
 /**
  * Materiales "memo": dato de referencia que YA está incluido en otro material, por lo que no se suma a los totales.
- * `madera_nv` (madera no valorizable) es una fracción de los residuos generales (no_aprovechables).
+ * `madera_nv` (madera NO valorizable) es una fracción de los residuos generales (no_aprovechables) — se guarda
+ * como referencia, pero no se suma de nuevo. La madera VALORIZABLE es distinta: es un reciclable más (material
+ * `madera_v` arriba, con tratamiento "reciclaje") y sí suma a los totales y a la valorización.
  */
 export const MEMO_MATERIALS = [
   { id: 'madera_nv', label: 'Madera no valorizable', parent: 'no_aprovechables', category: 'no_aprovechables', color: '#8a5a3c', treatment: 'disposicion' },
@@ -71,7 +74,7 @@ export const DEFAULT_CONFIG = {
   companySegments: DEFAULT_COMPANY_SEGMENTS,
   factors: {
     // tCO2e evitadas por tonelada gestionada. Valores indicativos: reemplazar por los del inventario real.
-    reciclaje: { carton: 2.9, papel: 3.0, pet: 1.6, film: 1.1, plastico_duro: 1.4, vidrio: 0.35, metales: 3.2, mixto: 0.8, raee: 1.9, peligrosos: 0, no_aprovechables: 0, organicos: 0 },
+    reciclaje: { carton: 2.9, papel: 3.0, pet: 1.6, film: 1.1, plastico_duro: 1.4, vidrio: 0.35, metales: 3.2, mixto: 0.8, madera_v: 0.9, raee: 1.9, peligrosos: 0, no_aprovechables: 0, organicos: 0 },
     compostaje: 0.25,
     energetica: 0.3,
     disposicion: 0,

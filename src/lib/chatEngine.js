@@ -101,6 +101,7 @@ const MATERIAL_TERMS = [
   [/\bvidrio\b/, { m: ['vidrio'], label: 'vidrio' }],
   [/\bmetal(es)?\b/, { m: ['metales'], label: 'metales' }],
   [/\bmixto\b/, { m: ['mixto'], label: 'reciclaje mixto' }],
+  [/\bmadera valorizable\b/, { m: ['madera_v'], label: 'madera valorizable' }],
   [/\borganic\w*\b/, { m: ['organicos'], label: 'orgánicos' }],
   [/\b(generales|no aprovechables?|residuos comunes|basura comun)\b/, { m: ['no_aprovechables'], label: 'residuos generales' }],
   [/\b(reciclables|aprovechables)\b/, { cat: 'aprovechables', label: 'reciclables' }],
@@ -129,7 +130,9 @@ function detectIntent(t, entityCount) {
   if (has(t, /\b(ayuda|que puedes|que sabes|como funcionas|que puedo preguntar|ejemplos?)\b/)) return 'help';
   if (has(t, /\b(que datos|cuantas sedes|cuantos meses|cobertura|hasta cuando|desde cuando|cuantas empresas|que periodo)\b/)) return 'coverage';
   if (has(t, /\b(anomali\w*|atipic\w*|inusual\w*|raro\w*|picos?|alertas?|sospechos\w*|desvio\w*|fuera de lo normal)\b/)) return 'anomalies';
-  if (has(t, /\bmadera\b/)) return 'wood';
+  // "Madera valorizable" es un reciclable más (como el cartón o el metal): se responde con los intents
+  // normales (total, composición, tasa…), no con el especial de "madera no valorizable" (memo) de abajo.
+  if (has(t, /\bmadera\b/) && !has(t, /\bmadera\s+valorizable/)) return 'wood';
   if (has(t, /\b(huella|carbono|co2|emision\w*)\b/)) return 'carbon';
   if (has(t, /\b(meta|metas|cumpl\w*|objetivo\w*)\b/)) return 'goal';
   if ((has(t, /\b(compar\w*|versus|vs|contra|diferencia entre)\b/) && entityCount >= 2) || has(t, /\bcompar\w*\b/)) return 'compare';

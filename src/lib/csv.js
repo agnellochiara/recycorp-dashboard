@@ -11,6 +11,7 @@ Object.assign(MATERIAL_ALIASES, {
   plastico: 'pet', 'plastico pet': 'pet', 'carton y papel': 'carton', organico: 'organicos', 'residuos organicos': 'organicos',
   metal: 'metales', 'residuos generales': 'no_aprovechables', 'residuos generales valorizables': 'no_aprovechables', 'reciclaje mixto': 'mixto',
   'madera no valorizables': 'madera_nv', 'madera no valorizable': 'madera_nv',
+  'madera valorizables': 'madera_v', 'madera valorizable': 'madera_v',
   // Nombres tal como salen del extractor de Recycorp
   'reciclaje carton': 'carton', 'reciclaje papel': 'papel', 'reciclaje film': 'film', 'reciclaje pet': 'pet',
   'reciclaje vidrio': 'vidrio', 'reciclaje metal': 'metales',
@@ -33,10 +34,14 @@ const TIPO_OVERRIDE = {
   'reciclaje mixto': ['mixto', 'reciclaje'], 'plastico duro': ['plastico_duro', 'reciclaje'],
   'residuos organicos': ['organicos', 'compostaje'],
   'residuos generales valorizables': ['no_aprovechables', 'disposicion'], 'residuos generales': ['no_aprovechables', 'disposicion'],
-  'madera no valorizables': ['madera_nv', 'disposicion'],
+  'madera no valorizables': ['madera_nv', 'disposicion'], 'madera no valorizable': ['madera_nv', 'disposicion'],
+  // Madera valorizable: es un reciclable más (suma a totales y a valorización), a diferencia de la NO
+  // valorizable (memo: ya está contada dentro de los generales, no se vuelve a sumar — ver MEMO_MATERIALS).
+  'madera valorizables': ['madera_v', 'reciclaje'], 'madera valorizable': ['madera_v', 'reciclaje'],
 };
-// "Madera Valorizables": se excluye del todo para no duplicar el cálculo (ya ocurre con el resto del histórico).
-const TIPO_EXCLUDED = new Set(['madera valorizables']);
+// Tipos que se excluyen por completo (ninguno por ahora: la madera valorizable dejó de excluirse — suma como
+// reciclable — y la NO valorizable se guarda como memo, no se excluye).
+const TIPO_EXCLUDED = new Set();
 
 function matchMaterial(v) { return MATERIAL_ALIASES[norm(v)]; }
 function matchTreatment(v) { return TREATMENT_ALIASES[norm(v)]; }
