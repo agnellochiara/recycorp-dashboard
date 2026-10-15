@@ -3,9 +3,10 @@
 // vida real, pero ayudan a comunicar el impacto a quien no interpreta toneladas de CO2 directamente.
 import { TreePine, Car, Home, Droplets, Zap, Info } from 'lucide-react';
 import { Card, CardHeader } from './ui.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 import { fmtNum } from '../lib/format.js';
 
-function Tile({ icon: Icon, value, label, color }) {
+function Tile({ icon: Icon, value, label, desc, color }) {
   return (
     <div className="flex items-start gap-2.5 bg-sunken rounded-xl p-3">
       <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${color}1a`, color }}>
@@ -14,23 +15,43 @@ function Tile({ icon: Icon, value, label, color }) {
       <div className="min-w-0">
         <div className="font-display text-base font-bold text-ink leading-tight">{value}</div>
         <div className="text-xs text-muted leading-snug">{label}</div>
+        <div className="text-[11px] text-muted/80 leading-snug mt-1">{desc}</div>
       </div>
     </div>
   );
 }
 
 export default function ImpactEquivalents({ impact }) {
+  const { isAdmin } = useAuth();
   if (!impact.co2) return null;
   const tiles = [
-    { icon: TreePine, color: '#1f7a5a', value: `${fmtNum(impact.trees, 0)}`, label: 'árboles equivalentes (secuestro en 10 años)' },
-    { icon: Car, color: '#3f7fd6', value: `${fmtNum(impact.carKm, 0)} km`, label: 'no recorridos en auto' },
-    { icon: Home, color: '#e6a23c', value: fmtNum(impact.homesYear, impact.homesYear < 10 ? 1 : 0), label: 'hogares con electricidad por un año' },
+    {
+      icon: TreePine, color: '#1f7a5a', value: `${fmtNum(impact.trees, 0)}`, label: 'árboles equivalentes (secuestro en 10 años)',
+      desc: 'Árboles jóvenes que tardarían 10 años en absorber la misma huella de carbono evitada.',
+    },
+    {
+      icon: Car, color: '#3f7fd6', value: `${fmtNum(impact.carKm, 0)} km`, label: 'no recorridos en auto',
+      desc: 'Kilómetros que un auto promedio dejaría de recorrer para evitar la misma huella de carbono.',
+    },
+    {
+      icon: Home, color: '#e6a23c', value: fmtNum(impact.homesYear, impact.homesYear < 10 ? 1 : 0), label: 'hogares con electricidad por un año',
+      desc: 'Consumo eléctrico anual de esa cantidad de hogares promedio, equivalente a la huella evitada.',
+    },
   ];
   if (impact.paperT > 0) {
     tiles.push(
-      { icon: TreePine, color: '#5fa83e', value: `${fmtNum(impact.paperTrees, 0)}`, label: 'árboles salvados por el papel/cartón reciclado' },
-      { icon: Droplets, color: '#1f9d8a', value: `${fmtNum(impact.paperWaterL / 1000, 0)} m³`, label: 'de agua ahorrada (papel/cartón)' },
-      { icon: Zap, color: '#c05ad6', value: `${fmtNum(impact.paperKwh, 0)} kWh`, label: 'de energía ahorrada (papel/cartón)' },
+      {
+        icon: TreePine, color: '#5fa83e', value: `${fmtNum(impact.paperTrees, 0)}`, label: 'árboles salvados por el papel/cartón reciclado',
+        desc: 'Árboles que no fue necesario talar gracias al papel y cartón reciclados en el período.',
+      },
+      {
+        icon: Droplets, color: '#1f9d8a', value: `${fmtNum(impact.paperWaterL / 1000, 0)} m³`, label: 'de agua ahorrada (papel/cartón)',
+        desc: 'Agua que se ahorra al reciclar ese papel y cartón en vez de fabricarlos con fibra virgen.',
+      },
+      {
+        icon: Zap, color: '#c05ad6', value: `${fmtNum(impact.paperKwh, 0)} kWh`, label: 'de energía ahorrada (papel/cartón)',
+        desc: 'Energía eléctrica que se ahorra al reciclar ese papel y cartón en vez de producirlos desde cero.',
+      },
     );
   }
 
@@ -42,7 +63,9 @@ export default function ImpactEquivalents({ impact }) {
       </div>
       <p className="px-4 pb-4 -mt-1 flex items-start gap-1.5 text-[11px] text-muted">
         <Info size={12} className="shrink-0 mt-0.5" />
-        Calculadas con factores de conversión públicos de referencia (no un inventario de ciclo de vida propio); ajustables en Administración → Metas y segmentos.
+        {isAdmin
+          ? 'Calculadas con factores de conversión públicos de referencia (no un inventario de ciclo de vida propio); ajustables en Administración → Metas y segmentos.'
+          : 'Calculadas con factores de conversión públicos de referencia, no un inventario de ciclo de vida propio.'}
       </p>
     </Card>
   );

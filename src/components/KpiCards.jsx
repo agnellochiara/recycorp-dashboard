@@ -29,10 +29,10 @@ export default function KpiCards({ records, filters, summary, goal, unit }) {
       <Kpi icon={Scale} label="Total generado" value={fmtMass(summary.total, unit)} delta={delta?.pct} />
       <Kpi
         icon={Target}
-        label={`Valorización${goal.mixed ? ' (meta ponderada)' : ''}`}
+        label="Valorización"
         value={fmtPct(summary.valRate)}
-        sub={`Meta: ${fmtPct(goal.value, goal.mixed ? 1 : 0)} · ${summary.valRate >= goal.value ? 'cumple' : `${fmtSigned(summary.valRate - goal.value)} pp`}`}
-        tone={summary.valRate >= goal.value ? 'good' : 'bad'}
+        sub={goal.mixed ? 'La meta varía por segmento de cliente' : `Meta: ${fmtPct(goal.value, 0)} · ${summary.valRate >= goal.value ? 'cumple' : `${fmtSigned(summary.valRate - goal.value)} pp`}`}
+        tone={goal.mixed ? 'neutral' : (summary.valRate >= goal.value ? 'good' : 'bad')}
       />
       <Kpi icon={Recycle} label="Reciclaje" value={fmtPct(summary.recRate)} sub={fmtMass(summary.recycled, unit)} />
       <Kpi icon={Leaf} label="Huella evitada" value={`${fmtNum(summary.co2, summary.co2 < 100 ? 1 : 0)} tCO₂e`} sub="vs. disposición en relleno" />

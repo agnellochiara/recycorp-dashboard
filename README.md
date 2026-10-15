@@ -23,15 +23,23 @@ construido con React + Vite + Tailwind. Funciona en dos modos:
 - **Flujo de residuos**: categoría × destino, alternando entre tabla y diagrama de Sankey (con el valor de
   cada flujo y el total de cada nodo visibles en el propio diagrama).
 - **Equivalencias de impacto**: la huella evitada y el papel/cartón reciclado traducidos a términos cotidianos
-  (árboles, km de auto, hogares con electricidad, agua y energía ahorradas) — factores ajustables en
-  Administración → Metas y segmentos → Factores (avanzado).
+  (árboles, km de auto, hogares con electricidad, agua y energía ahorradas), con una oración explicando cada
+  una — factores ajustables en Administración → Metas y segmentos → Factores (avanzado, visible solo para
+  administradores).
 - **Filtros**: año, mes, sede, material y destino — el filtro de sede funciona también en "Por empresa",
-  acotado a las sedes de la empresa activa.
+  acotado a las sedes de la empresa activa; cada filtro trae un botón "Todos" para no tener que marcar uno por
+  uno.
+- **Metas sin mezclar segmentos**: la vista general no muestra una meta consolidada cuando se ven todas las
+  empresas a la vez (cada segmento de cliente tiene su propia meta real); al entrar a una empresa sí se compara
+  contra su meta.
 - **Asistente de datos sin IA generativa**: responde preguntas en lenguaje natural calculando directamente sobre
   los mismos datos del panel (`src/lib/chatEngine.js`).
 - **Exportación** a PNG (por bloque) y PDF (reporte completo, respetando la disposición del panel).
-- **Administración**: carga de datos por CSV (reemplazar o agregar), gestión de sedes, metas por segmento y
-  factores de huella de carbono — protegida por sesión de administrador.
+- **Administración**: carga y descarga de datos por Excel o CSV (reemplazar o agregar al histórico), gestión de
+  sedes, metas por segmento y factores de huella de carbono — protegida por sesión de administrador. La
+  importación acepta tanto la plantilla propia como el Excel crudo del extractor de Recycorp (columnas de
+  empresa, cliente y sede), haciendo coincidir los nombres de forma tolerante a variantes (mayúsculas, tildes,
+  "AQP" de más o de menos, sufijos legales de la empresa) en vez de exigir que estén escritos exactamente igual.
 
 ## Desarrollo
 

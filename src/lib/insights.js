@@ -6,11 +6,19 @@ import { fmtMass, fmtPct, fmtSigned, periodLabel } from './format.js';
 export function buildInsights({ label, unit, summary, goal, fluct, anomalies, memo, range, siteCount }) {
   const out = [];
   if (summary.total > 0) {
-    const gap = summary.valRate - goal.value;
-    out.push({
-      tone: gap >= 0 ? 'good' : 'bad',
-      text: `${label} generó ${fmtMass(summary.total, unit)} durante ${range} en ${siteCount} ${siteCount === 1 ? 'sede' : 'sedes'}. Valorizó el ${fmtPct(summary.valRate)} frente a una meta ${goal.mixed ? 'ponderada ' : ''}de ${fmtPct(goal.value, goal.mixed ? 1 : 0)}: ${gap >= 0 ? 'la cumple' : 'está por debajo'} (${fmtSigned(gap)} pp).`,
-    });
+    const sedes = `${siteCount} ${siteCount === 1 ? 'sede' : 'sedes'}`;
+    if (goal.mixed) {
+      // No se mezcla una meta consolidada entre segmentos de cliente distintos (cada uno tiene su propia meta
+      // real): se reporta la tasa lograda sin compararla contra un número que combinaría metas que no son
+      // comparables entre sí (ver "Valorización vs. meta" por segmento para el detalle).
+      out.push({ tone: 'neutral', text: `${label} generó ${fmtMass(summary.total, unit)} durante ${range} en ${sedes}. Valorizó el ${fmtPct(summary.valRate)} en conjunto; la meta varía por segmento de cliente (ver "Valorización vs. meta" por segmento).` });
+    } else {
+      const gap = summary.valRate - goal.value;
+      out.push({
+        tone: gap >= 0 ? 'good' : 'bad',
+        text: `${label} generó ${fmtMass(summary.total, unit)} durante ${range} en ${sedes}. Valorizó el ${fmtPct(summary.valRate)} frente a una meta de ${fmtPct(goal.value, 0)}: ${gap >= 0 ? 'la cumple' : 'está por debajo'} (${fmtSigned(gap)} pp).`,
+      });
+    }
   }
   const st = fluct.stats;
   if (st.latest) {
