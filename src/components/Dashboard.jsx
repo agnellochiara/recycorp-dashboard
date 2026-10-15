@@ -17,7 +17,8 @@ import BenchmarkChart from './charts/BenchmarkChart.jsx';
 import FlowSection from './FlowSection.jsx';
 import ImpactEquivalents from './ImpactEquivalents.jsx';
 import { Card, CardHeader, Segmented, Spinner, Empty } from './ui.jsx';
-import { filterRecords, summarize, monthlyKpis, byMaterial, flowMatrix, bySite, distinctPeriods } from '../lib/calc.js';
+import { filterRecords, summarize, monthlyKpis, byMaterial, flowMatrix, bySite, byCompany, distinctPeriods } from '../lib/calc.js';
+import { MATERIAL_BY_ID } from '../lib/constants.js';
 import { fluctuation, detectAnomalies, anomaliesInFilters, anomalyCountByPeriod } from '../lib/analytics.js';
 import { goalForRecords } from '../lib/goals.js';
 import { computeImpact } from '../lib/impact.js';
@@ -25,6 +26,17 @@ import { periodLabel } from '../lib/format.js';
 import { exportNodePng, exportReportPdf } from '../lib/exporter.js';
 
 const slugify = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+// Qué se compara en los rankings de sedes/empresas: la tasa de valorización, o el volumen generado —
+// de todo, o solo de una categoría de residuo (para responder "quién genera más reciclables/orgánicos/generales").
+const BENCH_METRICS = [
+  { value: 'rate', label: '% Valorización' },
+  { value: 'total', label: 'Volumen total' },
+  { value: 'aprovechables', label: 'Reciclables' },
+  { value: 'organicos', label: 'Orgánicos' },
+  { value: 'no_aprovechables', label: 'Generales' },
+];
+const benchSubtitle = (metric) => BENCH_METRICS.find((m) => m.value === metric)?.label || 'Tasa de valorización';
 
 function readHash(companies) {
   const m = window.location.hash.match(/^#\/empresa\/(.+)$/);
@@ -39,6 +51,7 @@ export default function Dashboard() {
   const { isAdmin } = useAuth();
   const [{ tab, company }, setRoute] = useState(() => readHash(config?.companies || []));
   const [unit, setUnit] = useState('t');
+  const [benchMetric, setBenchMetric] = useState('rate');
   const [theme, setTheme] = useState(() => (document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'));
   const [loginOpen, setLoginOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
@@ -81,7 +94,12 @@ export default function Dashboard() {
   const monthly = useMemo(() => monthlyKpis(filtered, config), [filtered, config]);
   const matByMaterial = useMemo(() => byMaterial(filtered), [filtered]);
   const matrix = useMemo(() => flowMatrix(filtered), [filtered]);
-  const siteRows = useMemo(() => bySite(filtered, scoped.sites), [filtered, scoped.sites]);
+  const benchRecords = useMemo(
+    () => (benchMetric === 'rate' || benchMetric === 'total' ? filtered : filtered.filter((r) => MATERIAL_BY_ID[r.m]?.category === benchMetric)),
+    [filtered, benchMetric]
+  );
+  const siteRows = useMemo(() => bySite(benchRecords, scoped.sites), [benchRecords, scoped.sites]);
+  const companyRows = useMemo(() => byCompany(benchRecords, scoped.sites), [benchRecords, scoped.sites]);
   const impact = useMemo(() => computeImpact(filtered, summary.co2, config.factors.equiv), [filtered, summary.co2, config.factors.equiv]);
   const fluct = useMemo(() => fluctuation(forFluct, coverageScope), [forFluct, coverageScope]);
   const allAnomalies = useMemo(() => detectAnomalies(forFluct, siteById), [forFluct, siteById]);
@@ -181,9 +199,22 @@ export default function Dashboard() {
             </Card>
 
             <Card exportBlock>
-              <CardHeader title={tab === 'company' ? 'Valorización por sede' : 'Ranking de sedes'} subtitle="Tasa de valorización" />
-              <div className="px-4 pb-4"><BenchmarkChart rows={siteRows} unit={unit} metric="rate" /></div>
+              <CardHeader
+                title={tab === 'company' ? `Ranking por sede · ${company}` : 'Ranking de empresas'}
+                subtitle={benchSubtitle(benchMetric)}
+                action={<Segmented value={benchMetric} onChange={setBenchMetric} options={BENCH_METRICS} className="no-export" />}
+              />
+              <div className="px-4 pb-4">
+                <BenchmarkChart rows={tab === 'company' ? siteRows : companyRows} unit={unit} metric={benchMetric === 'rate' ? 'rate' : 'total'} />
+              </div>
             </Card>
+
+            {tab === 'overview' && (
+              <Card exportBlock>
+                <CardHeader title="Ranking de sedes" subtitle={benchSubtitle(benchMetric)} />
+                <div className="px-4 pb-4"><BenchmarkChart rows={siteRows} unit={unit} metric={benchMetric === 'rate' ? 'rate' : 'total'} /></div>
+              </Card>
+            )}
 
             <FlowSection matrix={matrix} unit={unit} />
 

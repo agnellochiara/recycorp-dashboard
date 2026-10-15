@@ -103,6 +103,23 @@ export function bySite(records, sites) {
   }));
 }
 
+export function byCompany(records, sites) {
+  const companyOf = Object.fromEntries(sites.map((s) => [s.id, s.company]));
+  const acc = new Map();
+  for (const r of records) {
+    const company = companyOf[r.s];
+    if (!company) continue;
+    const a = acc.get(company) || { total: 0, valorized: 0 };
+    a.total += r.kg;
+    if (TREATMENT_BY_ID[r.t]?.valorized) a.valorized += r.kg;
+    acc.set(company, a);
+  }
+  return [...acc.entries()].map(([company, a]) => ({
+    id: company, name: company,
+    total: a.total, valorized: a.valorized, rest: a.total - a.valorized, rate: a.total ? (a.valorized / a.total) * 100 : 0,
+  }));
+}
+
 /** Matriz categoría de residuo → tratamiento (kg). */
 export function flowMatrix(records) {
   const m = Object.fromEntries(CATEGORIES.map((c) => [c.id, Object.fromEntries(TREATMENTS.map((t) => [t.id, 0]))]));
